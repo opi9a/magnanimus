@@ -23,47 +23,33 @@ class Piece():
             - work out along raw domains, using board
         _get score
 
-        move?
-            new row, col
-            new raw domain, attacking, protecting, covering
-            effect on OTHERS attacking, protecting, covering
-            (or recalc whole board)
-
     """
-    def __init__(self, name, color, row, col, board):
+    def __init__(self, board_arr, row, col, threatened_domain):
         # unsure if I want square here or just use the piece's index / key
-        self.name = name
-        self.color = color
+        self.board_arr = board_arr
         self.square = row, col
+        self.threatened_domain = threatened_domain
 
-        self.available = None
-        self.attacking = None
-        self.defending = None
-        self.score = None
+        self.color, self.name = board_arr[row, col]
 
-        if board is not None:
-            self.calculate(board)
-
-
-    def __repr__(self):
-        out = [f"{k+' :'}".ljust(12) + str(v) for k, v in self.__dict__.items()
-               if k not in ['col', 'row']]
-        return "\n".join(out)
-
-    def calculate(self, board):
-        """
-        Based on the piece's position and the rest of the board,
-        get the domains available, attacking and defending
-
-        Recalculate the score
-        """
-        a, b, c = get_actual_domains(self, board)
+        a, b, c = get_actual_domains(self, board_arr, threatened_domain)
         self.available, self.attacking, self.defending = a, b, c
+        self.next_moves = self.available + [x[1] for x in self.attacking]
 
         self.score = score_piece(self)
 
 
-def get_actual_domains(piece, board):
+    def __repr__(self):
+        pad = 12
+        sq = self.square
+        out = ['square:'.ljust(pad) + f'{sq[0]}, {sq[1]}']
+        for field in ['available', 'attacking', 'defending', 'next_moves']:
+            out.append(f'{field}:'.ljust(pad) + f'{self.__dict__[field]}')
+        out.append('score:'.ljust(pad) + f'{self.score:.3f}')
+        return "\n".join(out)
+
+
+def get_actual_domains(piece, board, threatened_domain):
     """
     Return:
         attacking - list of (piece, square) tuples
@@ -89,21 +75,21 @@ def get_actual_domains(piece, board):
             for square in direction:
                 if board[square] is None:
                     available.append(square)
-                elif board[square].color == piece.color:
-                    defending.append((board[square].name, square))
+                elif board[square][0] == piece.color:
+                    defending.append((board[square][1], square))
                     break
                 else:
-                    attacking.append((board[square].name, square))
+                    attacking.append((board[square][1], square))
                     break
 
-    elif piece.name in ['king', 'knight']:
+    elif piece.name  == 'knight':
         for square in raw_domains:
             if board[square] is None:
                 available.append(square)
-            elif board[square].color == piece.color:
-                defending.append((board[square].name, square))
+            elif board[square][0] == piece.color:
+                defending.append((board[square][1], square))
             else:
-                attacking.append((board[square].name, square))
+                attacking.append((board[square][1], square))
 
     elif piece.name == 'pawn':
         for square in raw_domains['covering']:
@@ -115,10 +101,22 @@ def get_actual_domains(piece, board):
         for square in raw_domains['hitting']:
             if board[square] is None:
                 continue
-            elif board[square].color == piece.color:
-                defending.append((board[square].name, square))
+            elif board[square][0] == piece.color:
+                defending.append((board[square][1], square))
             else:
-                attacking.append((board[square].name, square))
+                attacking.append((board[square][1], square))
+
+    elif piece.name  == 'king':
+        breakpoint()
+        if threatened_domain is None:
+            threatened_domain = []
+        for square in raw_domains:
+            if board[square] is None and square not in threatened_domain:
+                available.append(square)
+            elif board[square][0] == piece.color:
+                defending.append((board[square][1], square))
+            else:
+                attacking.append((board[square][1], square))
 
 
     return available, attacking, defending
