@@ -23,44 +23,35 @@ class Piece():
             - work out along raw domains, using board
         _get score
 
-        move?
-            new row, col
-            new raw domain, attacking, protecting, covering
-            effect on OTHERS attacking, protecting, covering
-            (or recalc whole board)
-
     """
-    def __init__(self, name, color, row, col, board):
+    def __init__(self, board_arr, row, col):
         # unsure if I want square here or just use the piece's index / key
-        self.name = name
-        self.color = color
+        self.board_arr = board_arr
         self.square = row, col
 
-        self.available = None
-        self.attacking = None
-        self.defending = None
-        self.score = None
+        self.color, self.name = board_arr[row, col]
 
-        if board is not None:
-            self.calculate(board)
+        a, b, c = get_actual_domains(self, board_arr)
+        self.available, self.attacking, self.defending = a, b, c
+        self.next_moves = self.available + [x[1] for x in self.attacking]
+
+        if 'king' in [x[0] for x in self.attacking]:
+            self.gives_check = True
+        else:
+            self.gives_check = False
+
+        self.score = score_piece(self)
 
 
     def __repr__(self):
-        out = [f"{k+' :'}".ljust(12) + str(v) for k, v in self.__dict__.items()
-               if k not in ['col', 'row']]
+        pad = 16
+        sq = self.square
+        out = ['square:'.ljust(pad) + f'{sq[0]}, {sq[1]}']
+        for field in ['color', 'name', 'available', 'attacking', 'defending',
+                      'next_moves', 'gives_check']:
+            out.append(f'{field}:'.ljust(pad) + f'{self.__dict__[field]}')
+        out.append('score:'.ljust(pad) + f'{self.score:.3f}')
         return "\n".join(out)
-
-    def calculate(self, board):
-        """
-        Based on the piece's position and the rest of the board,
-        get the domains available, attacking and defending
-
-        Recalculate the score
-        """
-        a, b, c = get_actual_domains(self, board)
-        self.available, self.attacking, self.defending = a, b, c
-
-        self.score = score_piece(self)
 
 
 def get_actual_domains(piece, board):
@@ -89,21 +80,21 @@ def get_actual_domains(piece, board):
             for square in direction:
                 if board[square] is None:
                     available.append(square)
-                elif board[square].color == piece.color:
-                    defending.append((board[square].name, square))
+                elif board[square][0] == piece.color:
+                    defending.append((board[square][1], square))
                     break
                 else:
-                    attacking.append((board[square].name, square))
+                    attacking.append((board[square][1], square))
                     break
 
     elif piece.name in ['king', 'knight']:
         for square in raw_domains:
             if board[square] is None:
                 available.append(square)
-            elif board[square].color == piece.color:
-                defending.append((board[square].name, square))
+            elif board[square][0] == piece.color:
+                defending.append((board[square][1], square))
             else:
-                attacking.append((board[square].name, square))
+                attacking.append((board[square][1], square))
 
     elif piece.name == 'pawn':
         for square in raw_domains['covering']:
@@ -115,10 +106,10 @@ def get_actual_domains(piece, board):
         for square in raw_domains['hitting']:
             if board[square] is None:
                 continue
-            elif board[square].color == piece.color:
-                defending.append((board[square].name, square))
+            elif board[square][0] == piece.color:
+                defending.append((board[square][1], square))
             else:
-                attacking.append((board[square].name, square))
+                attacking.append((board[square][1], square))
 
 
     return available, attacking, defending

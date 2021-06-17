@@ -1,6 +1,12 @@
 from pathlib import Path
 
+from my_tools.logging import get_filelog
+
 DATA_DIR = Path('~/.magnanimus/data').expanduser()
+LOG_DIR = Path('~/.magnanimus/logs').expanduser()
+LOG = get_filelog(logfile_path=LOG_DIR / 'magnanimus.log')
+
+BASE_COLS = ['piece', 'color', 'row', 'col']
 
 PIECE_CODES = {
     'pawn': 'p',
@@ -13,6 +19,7 @@ PIECE_CODES = {
 
 REV_PIECE_CODES = { v: k for k, v in PIECE_CODES.items() }
 
+# you are here: make this ((row, col), 'color', 'piece')
 INIT_BOARD_TUPLES = (
     [(REV_PIECE_CODES[pc], 'black', 0, col)
      for col, pc in enumerate('rnbqkbnr')] + 
