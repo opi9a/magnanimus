@@ -8,6 +8,8 @@ LOG = get_filelog(logfile_path=LOG_DIR / 'magnanimus.log')
 
 BASE_COLS = ['piece', 'color', 'row', 'col']
 
+PATHS_DF_COLS = ['path', 'score', 'to_move', 'next_moves']
+
 PIECE_CODES = {
     'pawn': 'p',
     'rook': 'r',

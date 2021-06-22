@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .utils import make_board, invert_color
+from .utils import invert_color
 
 """
 Position:
@@ -82,7 +82,6 @@ def analyse_board(board_arr, to_move):
 
             piece_data.append([piece.name, piece.color,
                                *piece.square, piece.score, piece.gives_check])
-            LOG.info(f'appending piece {piece_data[-1]}')
 
             if piece.next_moves and piece.color == to_move:
                 for move in piece.next_moves:
@@ -102,32 +101,10 @@ def analyse_board(board_arr, to_move):
     moves = pd.DataFrame(moves).values
 
     if df['gives_check'].any():
-        in_check = df.loc[df['gives_check'], 'color'].unique()
+        checks = df.loc[df['gives_check'], 'color'].unique()
         # assert len(in_check) == 1
-        is_checked = invert_color(to_move)
+        is_checked = invert_color(checks[0])
     else:
         is_checked = None
 
     return scores, net_score, moves, is_checked
-
-
-def elaborate_board(board_arr):
-    """
-    may be obsolete - make pieces on the fly now
-    Return an np array with Piece objects, from one
-    with <color>, <piece> tuples
-    """
-
-    pieces_arr = np.array([None]*64).reshape(8,8)
-
-    # make piece objects
-    for row in range(8):
-        for col in range(8):
-            if board_arr[row, col] is None:
-                continue
-            pieces_arr[row, col] = Piece(board_arr, row, col)
-
-    return pieces_arr
-
-
-

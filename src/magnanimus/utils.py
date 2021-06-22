@@ -200,3 +200,15 @@ def expand_color(color_init):
 
 def expand_piece(piece_init):
     return REV_PIECE_CODES[piece_init.lower()]
+
+def vis_paths_df(paths_df):
+    """
+    Return a string rep of paths_df
+    """
+
+    out = []
+    for path in paths_df.itertuples():
+        line = []
+        data = path[1]
+
+

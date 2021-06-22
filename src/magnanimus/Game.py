@@ -19,18 +19,26 @@ path    score   next_moves
 ----    -----   ----------
 []          0   [((1,1),(2,1))]
 
+YOU ARE HERE you are here
+
+1. in extend paths pick only the top N evaluated next moves to add back to paths_df
+    - careful to sort by ascending or not depending on color relevant for that move
+
+2. checkmate
+3. record games
+4. tweak scoring to make pieces more valuable
 """
 import pandas as pd
 import  numpy as np
 from datetime import datetime, timedelta
-from .constants import INIT_BOARD_TUPLES, PIECE_CODES, LOG
-from .analyse_board import analyse_board, elaborate_board
+from .constants import INIT_BOARD_TUPLES, PIECE_CODES, LOG, PATHS_DF_COLS
+from .analyse_board import analyse_board
 from .utils import (make_board_from_tuples, print_board, invert_color,
                     get_board_str, update_board)
 from .Piece import Piece
 from .extend_paths import extend_paths
 
-class Magnanimus():
+class Game():
     
     def __init__(self, piece_tuples=None, color_playing='black',
                  to_move='white', time_sec=5, auto_play=True):
@@ -43,6 +51,7 @@ class Magnanimus():
         self.last_move = None
         self.time_sec = time_sec
 
+        # set attributes with initial status
         scores, net_score, next_moves, is_checked = (
             analyse_board(self.board_arr, self.to_move))
 
@@ -58,10 +67,7 @@ class Magnanimus():
 
         # main loop
         if auto_play:
-            while True:
-                status = self.next()
-                if status == 'x':
-                    break
+            self.auto_play()
 
     def __repr__(self):
         out = []
@@ -70,10 +76,14 @@ class Magnanimus():
         out.append(f'       black: {self.scores["black"]:.2f}')
         if self.to_move == 'black':
             out[-1] += '  to move'
+        if self.is_checked == 'black':
+            out[-1] += '  in check'
         out.append(get_board_str(self.board_arr))
         out.append(f'       white: {self.scores["white"]:.2f}')
         if self.to_move == 'white':
             out[-1] += '  to move'
+        if self.is_checked == 'white':
+            out[-1] += '  in check'
         out.append('')
 
 
@@ -101,14 +111,25 @@ class Magnanimus():
         if move == 'x':
             return 'x'
 
+        if move == 'checkmate':
+            return 'checkmate'
+
         print(f'{self.to_move} move:', move)
 
         # update board and turn
         self.board_arr = update_board(self.board_arr, [move])
         self.last_move = move
         self.to_move = invert_color(self.to_move)
-        self.scores, self.net_score, self.next_moves, self.in_check = (
+        self.scores, self.net_score, self.next_moves, self.is_checked = (
             analyse_board(self.board_arr, self.to_move))
+
+    def auto_play(self):
+        while True:
+            status = self.next()
+            if status == 'x':
+                break
+            if status == 'checkmate':
+                break
 
 
     def get_my_move(self):
@@ -130,12 +151,21 @@ class Magnanimus():
                            init_next_moves=init_next_moves, to_move=to_move)
 
         # loop extending paths
-        max_it = 20
+        max_it = 2
         its = 0
         timeout = datetime.now() + timedelta(seconds=self.time_sec)
         while True:
-            self.paths_df = extend_paths(
+            LOG.info(f'on it {its} of {max_it}, time {datetime.now()} of {timeout}')
+            new_paths_df = extend_paths(
                 self.board_arr, self.paths_df, timeout=timeout)
+            if new_paths_df is None:
+                # checkmate
+                return 'checkmate'
+            else:
+                self.paths_df = new_paths_df
+            next_moves_to_try = new_paths_df['next_moves'].apply(len).sum()
+            LOG.info(f'have {len(new_paths_df)} paths in df, with '
+                     f'{next_moves_to_try} moves to try')
             to_move = invert_color(to_move)
             its += 1
             if its == max_it or datetime.now() >= timeout:
@@ -161,12 +191,9 @@ class Magnanimus():
         }
 
 def get_empty_paths_df(to_move, init_score=None, init_next_moves=None):
-    return pd.DataFrame([{
-        'path': [],
-        'score': init_score,
-        'to_move': to_move,
-        'next_moves': init_next_moves, # a list of moves
-    }])
+    df = pd.DataFrame(columns=PATHS_DF_COLS)
+    df.loc[0] = [], init_score, to_move, init_next_moves
+    return df
 
 
 
@@ -181,7 +208,8 @@ def get_opponent_move(board_arr):
         if raw_move == 'x':
             return 'x'
         
-        r0, c0, _, r1, c1 = raw_move
+        r0, c0 = raw_move[:2]
+        r1, c1 = raw_move[-2:]
         move = ((int(r0), int(c0)), (int(r1), int(c1)))
 
         # get the piece being moved, to check move is legit

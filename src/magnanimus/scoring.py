@@ -10,9 +10,10 @@ PIECE_BASE_VALUES = {
 }
 
 COEFFS = {
-    'avail': 0.2,
-    'defending': 0.5,
-    'attacking': 0.2, # NB this multiplies the points value of attacked piece
+    'avail': 0.02,
+    'defending': 0.05,
+    'attacking': 0.02, # NB this multiplies the points value of attacked piece
+    'check': 1,
 }
 
 
