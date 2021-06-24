@@ -108,3 +108,4 @@ def analyse_board(board_arr, to_move):
         is_checked = None
 
     return scores, net_score, moves, is_checked
+

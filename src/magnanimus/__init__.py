@@ -1,7 +1,7 @@
-import Game
-import constants
-import get_moves
-import extend_paths
-import analyse_board
-import utils
-import testing
+from .Game import *
+from .constants import *
+from .get_moves import *
+from .extend_paths import *
+from .analyse_board import *
+from .utils import *
+from .testing import *
