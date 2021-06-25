@@ -8,32 +8,10 @@ from .constants import (
 
 from .Piece import Piece
 
-
 def invert_color(color):
     if color == 'black':
         return 'white'
     return 'black'
-
-def test_print():
-    print('\u2654')
-    x = '\u2654'
-    print(x)
-    print(f"{x}")
-    print(PIECE_UNICODES['white']['king'])
-
-def make_board_from_tuples(piece_tuples):
-    """
-    From a list of piece tuples make a np array for board
-    with K / k, Q / q etc
-
-    This is the main encoding of the board
-    """
-    board_arr = np.array([None]*64).reshape(8,8)
-
-    for pc, color, row, col in piece_tuples:
-        board_arr[row, col] = color, pc
-
-    return board_arr
 
 def update_board(board_arr, moves):
     """
@@ -103,8 +81,7 @@ def get_board_str(board_arr=None, board_tuples=None,
     return "\n".join(out)
 
 
-def print_board(board_arr=None, board_tuples=None, 
-                scores=None, hlights=None):
+def print_board(board_df=None, scores=None, hlights=None):
     """
     Print the passed board array.
     Trad notation on west / south axes, np.array notation on north / east
@@ -112,8 +89,7 @@ def print_board(board_arr=None, board_tuples=None,
     pass a list of squares to hlights and they will be identified with | |
     """
 
-    if board_arr is None:
-        board_arr = make_board_from_tuples(board_tuples)
+    df = board_df
 
     print()
     
@@ -129,17 +105,21 @@ def print_board(board_arr=None, board_tuples=None,
     for row in range(8):
         print(f" {row}  ", end="")
         for col in range(8):
-            if board_arr is None:
+            if df is None:
+                piece = None
                 to_print = f"{row},{col}"
-            elif board_arr[row, col] is None:
-                to_print = (" ")
             else:
-                color, p_name = board_arr[row, col]
-                to_print = (f"{PIECE_UNICODES[color][p_name]}")
+                piece = df.T.get((row, col))
 
-            if hlights is not None and (row, col) in hlights:
+                if piece is None:
+                    to_print = (" ")
+                else:
+                    color, p_name = piece['color'], piece['piece']
+                    to_print = (f"{PIECE_UNICODES[color][p_name]}")
+
+            if hlights is not None and ((row, col)) in hlights:
                 to_print = f"|{to_print}|"
-            elif board_arr is not None:
+            elif df is not None:
                 to_print = f" {to_print} "
 
             if black:

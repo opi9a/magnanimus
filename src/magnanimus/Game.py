@@ -33,10 +33,11 @@ import  numpy as np
 from datetime import datetime, timedelta
 from .constants import INIT_BOARD_TUPLES, PIECE_CODES, LOG, PATHS_DF_COLS
 from .analyse_board import analyse_board
-from .utils import (make_board_from_tuples, print_board, invert_color,
-                    get_board_str, update_board)
+from .domains import make_board_df
+from .utils import print_board, invert_color, get_board_str, update_board
 from .Piece import Piece
 from .extend_paths import extend_paths
+from .scoring import score_piece
 
 class Game():
     
@@ -44,30 +45,42 @@ class Game():
                  to_move='white', time_sec=5, auto_play=True):
 
         LOG.info('init magnanimo')
-        self.board_arr = make_board_from_tuples(piece_tuples
-                                                or INIT_BOARD_TUPLES)
         self.color_playing = color_playing
         self.to_move = to_move
         self.last_move = None
         self.time_sec = time_sec
 
         # set attributes with initial status
-        scores, net_score, next_moves, is_checked = (
-            analyse_board(self.board_arr, self.to_move))
+        self.df = make_board_df(piece_tuples or INIT_BOARD_TUPLES)
 
+        self.next_moves = self.df['available'] + self.df['attacking']
 
-        self.paths_df = get_empty_paths_df(to_move, init_score=net_score,
-                                           init_next_moves=next_moves)
-
-        self.scores = scores
-        self.net_score = net_score
-        self.next_moves = next_moves
-        self.is_checked = is_checked
+        self.paths_df = pd.DataFrame(
+            {
+                'path': [],
+                'df': self.df,
+                'score': self.score,
+                # you are here
+                # where to put check, mate etc?
+                # may need to do check separately from score
+                # as recalculating it?  (actually the piece giving check would
+                # be automatically recalculated?
+            },
+            index = [0]
+        )
 
 
         # main loop
         if auto_play:
             self.auto_play()
+
+    @property
+    def score(self):
+        return self.df['score'].sum()
+
+    @property
+    def is_checked(self):
+        checks = self.df.loc[self.df['gives_check']]
 
     def __repr__(self):
         out = []

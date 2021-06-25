@@ -61,7 +61,41 @@ from .domains import make_domains
 # get the empty-board domains (by square, by piece)
 RAW_DOMAINS = make_domains()
 
-def analyse_board(board_arr, to_move):
+def new_path_line(prev_path_line, move, moving_color):
+    """
+    Get series with:
+        path
+        updated df (prev df with move applied)
+        next_moves (acc for check)
+        status
+    1. update positions
+    2. get list of pieces to rescore
+    3. rescore those pieces
+    4. if moving king is in check, need to signal its not viable,
+       eg return None, so calling func knows not to add it
+       (only relevant if king moved, or on list of affected pieces, or
+        was already in check)
+    5. get next moves (excl checks??? no, not eval here)
+    """
+    next_moves = []
+
+    out = dict(
+        path = path,
+        score = df.score.sum(),
+    )
+    pass
+
+def get_checks(df):
+    """
+    Return 'white', 'black', 'white_mate', 'black_mate', 'stalemate'
+
+    mate when king has no moves and is in check
+    stalemate when player has no moves but not in check
+    """
+
+
+    kings = df.loc[df.piece == 'king'].reset_index().set_index('color')
+def analyse_board(board_df, to_move):
     """
     For an array of (<color>, <piece>), return score info and possible
     next moves for the passed color
@@ -72,6 +106,8 @@ def analyse_board(board_arr, to_move):
 
     piece_data = []
     moves = []
+
+
     for row in range(8):
         for col in range(8):
 
@@ -108,4 +144,5 @@ def analyse_board(board_arr, to_move):
         is_checked = None
 
     return scores, net_score, moves, is_checked
+
 

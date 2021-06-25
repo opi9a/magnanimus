@@ -1,7 +1,7 @@
-import numpy as np
 import operator
 
 """
+CONSTANT
 For each square:
     for each possible piece that may be there:
         squares covered by that piece (if empty board)
@@ -14,9 +14,10 @@ For each square:
     NB covering / moving are same for all pieces except pawns <shrugs>
 """
 
+
 def make_domains():
     """
-    Return a board array of domains
+    Return a dict of squares, with the domains for each piece on that square
 
     For each square:
         for each possible piece:
@@ -26,9 +27,10 @@ def make_domains():
     ordered lists moving away from the root square (to enable handling of
     blocking pieces)
 
-    For king, knight and moved pawns the 
+    For king, knight and moved pawns order is not reqd.  Use a single list
+    (not list of lists)
     """
-    out = np.array([None]*64).reshape(8, 8)
+    out = {}
 
     for row in range(8):
         for col in range(8):

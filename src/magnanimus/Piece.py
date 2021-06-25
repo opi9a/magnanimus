@@ -24,14 +24,14 @@ class Piece():
         _get score
 
     """
-    def __init__(self, board_arr, row, col):
+    def __init__(self, board_df, row, col):
         # unsure if I want square here or just use the piece's index / key
-        self.board_arr = board_arr
+        self.board_df = board_df
         self.square = row, col
 
-        self.color, self.name = board_arr[row, col]
+        self.name , self.color= board_df.loc[(row, col)].values
 
-        a, b, c = get_actual_domains(self, board_arr)
+        a, b, c = get_actual_domains(self.square, board_df)
         self.available, self.attacking, self.defending = a, b, c
         self.next_moves = self.available + [x[1] for x in self.attacking]
 
@@ -52,66 +52,5 @@ class Piece():
             out.append(f'{field}:'.ljust(pad) + f'{self.__dict__[field]}')
         out.append('score:'.ljust(pad) + f'{self.score:.3f}')
         return "\n".join(out)
-
-
-def get_actual_domains(piece, board):
-    """
-    Return:
-        attacking - list of (piece, square) tuples
-        defending - list of (piece, square) tuples
-        covering - list of squares
-    """
-    # directional
-
-    if piece.name == 'pawn':
-        p_name = piece.color[0] + '_pawn'
-    else:
-        p_name = piece.name
-
-    raw_domains = RAW_DOMAINS[piece.square][p_name]
-
-    available = []
-    attacking = []
-    defending = []
-
-    if piece.name in ['rook', 'bishop', 'queen']:
-        for direction in raw_domains:
-            # work outwards
-            for square in direction:
-                if board[square] is None:
-                    available.append(square)
-                elif board[square][0] == piece.color:
-                    defending.append((board[square][1], square))
-                    break
-                else:
-                    attacking.append((board[square][1], square))
-                    break
-
-    elif piece.name in ['king', 'knight']:
-        for square in raw_domains:
-            if board[square] is None:
-                available.append(square)
-            elif board[square][0] == piece.color:
-                defending.append((board[square][1], square))
-            else:
-                attacking.append((board[square][1], square))
-
-    elif piece.name == 'pawn':
-        for square in raw_domains['covering']:
-            if board[square] is None:
-                available.append(square)
-            else:
-                break
-
-        for square in raw_domains['hitting']:
-            if board[square] is None:
-                continue
-            elif board[square][0] == piece.color:
-                defending.append((board[square][1], square))
-            else:
-                attacking.append((board[square][1], square))
-
-
-    return available, attacking, defending
 
 

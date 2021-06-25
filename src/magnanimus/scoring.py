@@ -16,23 +16,30 @@ COEFFS = {
     'check': 1,
 }
 
-
-def score_piece(piece):
+def score_piece(piece, df):
     """
-    Return a value
+    Score from a pd series, and if gives check
     """
-    base = PIECE_BASE_VALUES[piece.name]
+    base = PIECE_BASE_VALUES[piece.piece]
+    avail, attack, defend = 0, 0, 0
 
-    # you are here
-    # work out scores as function of 
 
     # available may be a nested list, so flatten (row, col for each)
-    avail = COEFFS['avail'] * len(np.array(piece.available).flatten()) / 2
+    if piece.available is not None:
+        avail = COEFFS['avail'] * len(np.array(piece.available).flatten()) / 2
 
-    defend = COEFFS['defending'] * len(piece.defending)
+    if piece.defending is not None:
+        defend = COEFFS['defending'] * len(piece.defending)
 
-    attack = sum(PIECE_BASE_VALUES[x[0]]
-                 for x in piece.attacking) * COEFFS['attacking']
+    gives_check = False
+    if piece.attacking is not None:
+        attack = 0
+        for square in piece.attacking:
+            target = df.loc[square, 'piece']
+            if target == 'king':
+                gives_check = True
+            else:
+                attack += PIECE_BASE_VALUES[target] * COEFFS['attacking']
 
     # print('score for'.ljust(8), piece.color, piece.name)
     # print('base'.ljust(8), f'{base:>4.1f}')
@@ -40,4 +47,9 @@ def score_piece(piece):
     # print('defend'.ljust(8), f'{defend:>4.1f}')
     # print('attack'.ljust(8), f'{attack:>4.1f}')
 
-    return base + avail + attack + defend
+    if piece.color == 'black':
+        return - (base + avail + attack + defend), gives_check
+
+    return base + avail + attack + defend, gives_check
+
+
