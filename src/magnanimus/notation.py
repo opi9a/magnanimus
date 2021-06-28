@@ -1,4 +1,3 @@
-from .Piece import Piece
 
 def trad_mv_to_vec(trad_mv, to_move, board_arr):
     """
@@ -92,6 +91,57 @@ def parse_trad_mv(trad_mv):
     for row in range(8):
         for col in range(8):
             pass
-            
+
+
+def vec_from_trad(trad):
+    """
+    Return an np.array vector of coordinates for a passed trad notation
+    position.
+
+    >>> vec_from_trad('a7')
+    1, 0
+    """
+    file, rank = trad
+    row = 8 - int(rank)
+    col = 'abcdefgh'.find(file)
+
+    return row, col
+
+
+def trad_from_vec(*vec):
+    """
+    Return trad notation version of passed np.array coordinates
+
+    >>> trad_from_vec(1, 0)
+    'a7'
+    """
+    row, col = vec
+    rank = 8 - row
+    file = 'abcdefgh'[col]
+
+    return f"{file}{rank}"
+
+
+def int_to_vec_sq(int_sq):
+    """
+    Return vector for int square identifier
     
+    >>> int_to_vec_sq(63)
+    (7, 7)
+    """
+
+    return int_sq // 8, int_sq % 8
+
+def vec_to_int_sq(*vec):
+    """
+    Return int for vec_sq identifier
+
+    >>> vec_to_int_sq(7, 7)
+    63
+    """
+    if len(vec) == 1:
+        # when passing a tuple (1, 3) actually passed as ((1, 3),)
+        vec = vec[0]
+    a, b = vec
+    return a*8 + b
 

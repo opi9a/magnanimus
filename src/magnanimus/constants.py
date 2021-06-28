@@ -6,10 +6,6 @@ DATA_DIR = Path('~/.magnanimus/data').expanduser()
 LOG_DIR = Path('~/.magnanimus/logs').expanduser()
 LOG = get_filelog(logfile_path=LOG_DIR / 'magnanimus.log')
 
-BASE_COLS = ['piece', 'color', 'row', 'col']
-
-PATHS_DF_COLS = ['path', 'to_move', 'df', 'score', 'next_moves']
-
 PIECE_CODES = {
     'pawn': 'p',
     'rook': 'r',

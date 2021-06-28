@@ -1,7 +1,11 @@
 import operator
+import pandas as pd
 
 """
 CONSTANT
+
+To use:
+    from domains import RAW_DOMAINS
 For each square:
     for each possible piece that may be there:
         squares covered by that piece (if empty board)
@@ -14,8 +18,10 @@ For each square:
     NB covering / moving are same for all pieces except pawns <shrugs>
 """
 
+from .utils import vec_to_int_sq
 
-def make_domains():
+
+def make_domains(int_squares=False):
     """
     Return a dict of squares, with the domains for each piece on that square
 
@@ -34,27 +40,38 @@ def make_domains():
 
     for row in range(8):
         for col in range(8):
-            out[row, col] = get_all_sq_domains(row, col)
-    return out
+            out[row, col] = get_all_sq_domains(row, col, int_squares)
+    
+    if not int_squares:
+        return out
+
+    ints_out = {}
+
+    for sq in out:
+        a, b = sq
+        ind = a*8 + b
+        ints_out[ind] = out[sq]
+
+    return ints_out
 
 
-def get_all_sq_domains(row, col):
+def get_all_sq_domains(row, col, int_squares):
     """
     Return a dict of all domains (by piece type) for the passed square
     """
     out = {}
-    out['rook'] = make_axes(row, col)
-    out['bishop'] = make_diagonals(row, col)
-    out['knight'] = get_knight_domain(row, col)
+    out['rook'] = make_axes(row, col, int_squares)
+    out['bishop'] = make_diagonals(row, col, int_squares)
+    out['knight'] = get_knight_domain(row, col, int_squares)
     out['queen'] = out['rook'] + out['bishop']
     out['king'] = [q_domain[0] for q_domain in out['queen']]
-    out['w_pawn'] = get_pawn_domain('white', row, col)
-    out['b_pawn'] = get_pawn_domain('black', row, col)
+    out['w_pawn'] = get_pawn_domain('white', row, col, int_squares)
+    out['b_pawn'] = get_pawn_domain('black', row, col, int_squares)
 
     return out
 
 
-def make_diagonals(row, col):
+def make_diagonals(row, col, int_squares):
     """
     For each of 4 possible directions from the square, make a list
     of squares encountered
@@ -83,10 +100,16 @@ def make_diagonals(row, col):
                 # making it a tuple (of tuples) helps with testing
                 out.append(tuple(direction_out))
 
+    if int_squares:
+        ints_out = []
+        for diag in out:
+            ints_out.append([vec_to_int_sq(vec) for vec in diag])
+        return ints_out
+
     return out
 
 
-def make_axes(row, col):
+def make_axes(row, col, int_squares):
     """
     For each of 4 possible directions from the square, make a list
     of squares encountered
@@ -123,10 +146,16 @@ def make_axes(row, col):
         if direction_out:
             out.append(tuple(direction_out))
 
+    if int_squares:
+        ints_out = []
+        for axis in out:
+            ints_out.append([vec_to_int_sq(vec) for vec in axis])
+        return ints_out
+
     return out
 
 
-def get_knight_domain(row, col):
+def get_knight_domain(row, col, int_squares):
     """
     Go 2 in each axis direction, then +1 -1 along other axis
     """
@@ -149,10 +178,14 @@ def get_knight_domain(row, col):
             if legal_square(new_row, new_col):
                 out.append((new_row, new_col))
 
+    if int_squares:
+        # its flat so no need to nest conversion
+        return [vec_to_int_sq(vec) for vec in out]
+
     return out
 
 
-def get_pawn_domain(color, row, col):
+def get_pawn_domain(color, row, col, int_squares):
     """
     Do on the fly because it is all so board-dependent?:
         covering: diag only
@@ -177,6 +210,10 @@ def get_pawn_domain(color, row, col):
         sq for sq in [(op(row, 1), col + 1), (op(row, 1), col - 1)]
         if legal_square(*sq)
     ]
+
+    if int_squares:
+        covering = [vec_to_int_sq(sq) for sq in covering]
+        hitting = [vec_to_int_sq(sq) for sq in hitting]
 
     return {
         'covering': covering,
@@ -213,3 +250,4 @@ def test_domains():
     print('ok')
 
 
+RAW_DOMAINS = make_domains(int_squares=True)

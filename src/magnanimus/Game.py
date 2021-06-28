@@ -31,13 +31,11 @@ YOU ARE HERE you are here
 import pandas as pd
 import  numpy as np
 from datetime import datetime, timedelta
-from .constants import INIT_BOARD_TUPLES, PIECE_CODES, LOG, PATHS_DF_COLS
-from .analyse_board import analyse_board
-from .domains import make_board_df
-from .utils import print_board, invert_color, get_board_str, update_board
-from .Piece import Piece
-from .extend_paths import extend_paths
-from .scoring import score_piece
+from .constants import INIT_BOARD_TUPLES, PIECE_CODES, LOG
+from .utils import invert_color, make_board_df, vec_to_int_sq
+from .print_board import print_board, get_board_str
+from .get_best_move import get_best_move, get_df_next_moves, Path
+from .analyse import analyse_board
 
 class Game():
     
@@ -51,24 +49,8 @@ class Game():
         self.time_sec = time_sec
 
         # set attributes with initial status
-        self.df = make_board_df(piece_tuples or INIT_BOARD_TUPLES)
-
-        self.next_moves = self.df['available'] + self.df['attacking']
-
-        self.paths_df = pd.DataFrame(
-            {
-                'path': [],
-                'df': self.df,
-                'score': self.score,
-                # you are here
-                # where to put check, mate etc?
-                # may need to do check separately from score
-                # as recalculating it?  (actually the piece giving check would
-                # be automatically recalculated?
-            },
-            index = [0]
-        )
-
+        df = make_board_df(piece_tuples or INIT_BOARD_TUPLES)
+        self.df = analyse_board(df)
 
         # main loop
         if auto_play:
@@ -79,20 +61,41 @@ class Game():
         return self.df['score'].sum()
 
     @property
+    def scores(self):
+        score = self.score
+        return {
+            'white': score,
+            'black': -score
+        }
+
+    @property
+    def next_moves(self):
+        return get_df_next_moves(self.df, self.to_move)
+
+    @property
+    def paths(self):
+        """
+        What it will init with (not extended)
+        """
+        return Path(df=self.df, to_move=self.to_move)
+
+    @property
     def is_checked(self):
-        checks = self.df.loc[self.df['gives_check']]
+        # assume only the color to move can be actually in check
+        return any(self.df['gives_check'])
 
     def __repr__(self):
         out = []
         pad = 20
         
-        out.append(f'       black: {self.scores["black"]:.2f}')
+
+        out.append(f'       black {-1 * self.score:.2f}')
         if self.to_move == 'black':
             out[-1] += '  to move'
         if self.is_checked == 'black':
             out[-1] += '  in check'
-        out.append(get_board_str(self.board_arr))
-        out.append(f'       white: {self.scores["white"]:.2f}')
+        out.append(get_board_str(self.df))
+        out.append(f'       white {self.score:.2f}')
         if self.to_move == 'white':
             out[-1] += '  to move'
         if self.is_checked == 'white':
@@ -103,20 +106,18 @@ class Game():
         return "\n".join(out)
 
     def __getitem__(self, sq):
-        row, col = sq
-        return Piece(self.board_arr, row, col)
+        return self.df.loc[sq]
 
 
     def next(self):
         """
         Do the next move
         """
-        print_board(self.board_arr, scores=self.scores,
-                    hlights=self.last_move)
+        print_board(self.df, hlights=self.last_move)
         print(f'{self.is_checked} is checked')
         # get the opponent's move if its their go
         if self.color_playing != self.to_move:
-            move = get_opponent_move(self.board_arr)
+            move = get_opponent_move(self.df)
 
         else:
             move = self.get_my_move()
@@ -156,12 +157,8 @@ class Game():
 
         to_move = self.color_playing
 
-        # init paths_df with current board
-        init_scores, init_score, init_next_moves, is_checked = analyse_board(
-            self.board_arr, to_move=to_move)
-
-        self.paths_df = get_empty_paths_df(init_score=init_score,
-                           init_next_moves=init_next_moves, to_move=to_move)
+        # init paths with current board
+        self.init_paths()
 
         # loop extending paths
         max_it = 2
@@ -169,16 +166,13 @@ class Game():
         timeout = datetime.now() + timedelta(seconds=self.time_sec)
         while True:
             LOG.info(f'on it {its} of {max_it}, time {datetime.now()} of {timeout}')
-            new_paths_df = extend_paths(
-                self.board_arr, self.paths_df, timeout=timeout)
-            if new_paths_df is None:
+            new_paths = extend_paths(self.paths)
+            if new_paths is None:
                 # checkmate
                 return 'checkmate'
             else:
-                self.paths_df = new_paths_df
-            next_moves_to_try = new_paths_df['next_moves'].apply(len).sum()
-            LOG.info(f'have {len(new_paths_df)} paths in df, with '
-                     f'{next_moves_to_try} moves to try')
+                self.paths = new_paths
+
             to_move = invert_color(to_move)
             its += 1
             if its == max_it or datetime.now() >= timeout:
@@ -190,8 +184,17 @@ class Game():
         # to do:  rationalize paths df, dropping as reqd
         return tuple(self.paths_df.iloc[0]['path'][0])
 
-    def print_board(self):
-        print_board(self.board_arr, scores=self.scores)
+    def print_board(self, next_moves_color=None):
+        """
+        Pass a color for next moves
+        """
+        if next_moves_color is not None:
+            next_moves = get_df_next_moves(self.df, next_moves_color)
+            destinations = [move[1] for move in next_moves]
+        else:
+            destinations = None
+
+        print_board(self.df, scores=self.scores, hlights=destinations)
 
     @property
     def info(self):
@@ -203,20 +206,27 @@ class Game():
             'max path_len': lengths_ser.index.max(),
         }
 
-def get_empty_paths_df(to_move, init_score=None, init_next_moves=None):
-    df = pd.DataFrame(columns=PATHS_DF_COLS)
-    df.loc[0] = [], init_score, to_move, init_next_moves
-    return df
+    def init_paths(self):
+        """
+        For a given board df, init a paths list
+        """
+        self.paths = [
+            {
+                'path': [],
+                'df': self.df,
+                'score': self.score,
+                'next_moves': self.next_moves,
+            }
 
+        ] 
 
-
-def get_opponent_move(board_arr):
+def get_opponent_move(board_df, to_move):
     """
     TODO: accept trad
     """
 
     while True:
-        raw_move = input('Your move rc,rc - eg 64,44 (x to quit):  ')
+        raw_move = input(f'Your move as {to_move} - eg 64,44 (x to quit):  ')
 
         if raw_move == 'x':
             return 'x'
@@ -224,12 +234,13 @@ def get_opponent_move(board_arr):
         r0, c0 = raw_move[:2]
         r1, c1 = raw_move[-2:]
         move = ((int(r0), int(c0)), (int(r1), int(c1)))
+        move = (vec_to_int_sq(move[0]), vec_to_int_sq(move[1]))
 
-        # get the piece being moved, to check move is legit
-        sq_from, sq_to = move
-        if board_arr[sq_from] is not None:
-            piece = Piece(board_arr, *sq_from)
-            if sq_to in piece.next_moves:
-                return move
+        legit_moves = get_df_next_moves(board_df, to_move)
+
+        if move in legit_moves:
+            return move
 
         print(f'{move} is not legal try again')
+
+
