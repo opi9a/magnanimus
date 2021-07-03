@@ -40,6 +40,8 @@ from .notation import trad_to_int
 
 from .get_best_move import get_best_move
 from .Path import get_df_next_moves, Path
+from .notation import trad_to_int
+
 
 class Game():
     
