@@ -18,7 +18,7 @@ For each square:
     NB covering / moving are same for all pieces except pawns <shrugs>
 """
 
-from .utils import vec_to_int_sq
+from .notation import vec_to_int_sq
 
 
 def make_domains(int_squares=False):

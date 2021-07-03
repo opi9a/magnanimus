@@ -19,12 +19,15 @@ REV_PIECE_CODES = { v: k for k, v in PIECE_CODES.items() }
 
 # you are here: make this ((row, col), 'color', 'piece')
 INIT_BOARD_TUPLES = (
-    [(REV_PIECE_CODES[pc], 'black', 0, col)
-     for col, pc in enumerate('rnbqkbnr')] + 
-    [('pawn', 'black', 1, col) for col in range(8)] + 
-    [('pawn', 'white', 6, col) for col in range(8)] + 
-    [(REV_PIECE_CODES[pc], 'white', 7, col)
-     for col, pc in enumerate('rnbqkbnr')]
+    [(REV_PIECE_CODES[pc], 'black', sq)
+     for sq, pc in enumerate('rnbqkbnr')] + 
+
+    [('pawn', 'black', sq + 8) for sq in range(8)] + 
+
+    [('pawn', 'white', sq + 48) for sq in range(8)] + 
+
+    [(REV_PIECE_CODES[pc], 'white', sq + 56)
+     for sq, pc in enumerate('rnbqkbnr')]
 )
 
 PIECE_UNICODES = {

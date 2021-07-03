@@ -4,8 +4,6 @@ import numpy as np
 
 from .constants import REV_PIECE_CODES, INIT_BOARD_TUPLES
 
-from .notation import vec_to_int_sq
-
 
 def make_board_df(piece_tuples=None):
     """
@@ -14,13 +12,6 @@ def make_board_df(piece_tuples=None):
     piece_tuples = piece_tuples or INIT_BOARD_TUPLES
 
     df = pd.DataFrame(piece_tuples)
-    if len(df.columns) == 4:
-        int_squares = [
-            vec_to_int_sq((row, col))
-            for row, col in df.iloc[:, 2:].values
-        ]
-        df = df.iloc[:, :2]
-        df['square'] = int_squares
     df.columns = ['piece', 'color', 'square']
     df = df.set_index('square')
 

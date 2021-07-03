@@ -9,6 +9,8 @@ def analyse_board(df, squares=None):
     """
     Generate score, gives_check and next_moves for whole board or
     for an iterable of squares
+
+    Returns the amended board
     """
 
     df = df.copy()
@@ -28,7 +30,7 @@ def analyse_board(df, squares=None):
     return df
 
 
-def analyse_piece(square, df):
+def analyse_piece(square, df, verbose=False):
     """
     THIS IS WHAT NEEDED
     Take the row identified by square (pd.Series), and the df
@@ -47,7 +49,7 @@ def analyse_piece(square, df):
 
     # free may be a nested list, so flatten (row, col for each)
     if free is not None:
-        scores['free'] = COEFFS['free'] * len(np.array(free).flatten()) / 2
+        scores['free'] = base * COEFFS['free'] * len(np.array(free).flatten()) / 2
 
     if defending is not None:
         scores['defend'] = COEFFS['defending'] * len(defending)
@@ -65,9 +67,13 @@ def analyse_piece(square, df):
                                      * COEFFS['attacking'])
 
     score = sum(scores.values())
-
     if df.loc[square, 'color'] == 'black':
         score =  - score
+
+    if verbose:
+        for field, score in scores.items():
+            print(field.ljust(12), score)
+        print('sum'.ljust(12), score)
 
     # returns
     return free, attacking, defending, gives_check, score
