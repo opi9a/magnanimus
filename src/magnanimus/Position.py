@@ -10,6 +10,12 @@ class Position():
     """
     YOU ARE HERE dev of this to replace Path, and much of Game
 
+    """
+from .utils import invert_color
+from .analyse import analyse_board
+
+class Position():
+    """
     Holds board and associated info and methods
     Intended for use both in Game (current state of the game) 
     and in projected positions
@@ -65,12 +71,53 @@ class Position():
         self.moves.append(move)
         self.to_move = invert_color(self.to_move)
 
+=======
+
+    attrs:
+        root df (or tuples)
+        past_moves
+        current df, score, is_check
+        score
+        is_check
+        to_move
+        next_moves
+    methods:
+        xx
+    """
+    def __init__(self, prev_posn=None, move=None,
+                 init_tuples=None, init_df=None,
+                 moves=None, to_move=None):
+        """
+        Either init from scratch with df and moves, or update one passed
+        """
+        # if updating an existing path with a move
+        if prev_path is not None:
+            self.moves = prev_path.moves + [move]
+            self.df = update_df(prev_path.df, move)
+            self.to_move = invert_color(prev_path.to_move)
+
+        # if init a new path
+        else:
+            self.moves = moves or []
+            self.df = df
+            self.to_move = to_move
+
+        self.score = self.df['score'].sum()
+        self.next_moves = get_df_next_moves(self.df, self.to_move)
+        self.mate = False
+        self.move = move
+>>>>>>> Stashed changes
 
     def __repr__(self):
         pad = 15
         out = []
+<<<<<<< Updated upstream
         # if self.move is not None:
         #     out.append('\nMOVE: '.ljust(pad) + f'{self.move}'.rjust(pad))
+=======
+        if self.move is not None:
+            out.append('\nMOVE: '.ljust(pad) + f'{self.move}'.rjust(pad))
+>>>>>>> Stashed changes
         out.append('')
         df_strs = str(self.df).split('\n')
         out.extend(['sq' + df_strs[0][2:]] + df_strs[2:])
@@ -97,6 +144,7 @@ class Position():
         else:
             return None
 
+<<<<<<< Updated upstream
     @property
     def score(self):
         return self.df['score'].sum()
@@ -113,6 +161,8 @@ class Position():
     def next_moves(self):
         return get_df_next_moves(self.df, self.to_move)
 
+=======
+>>>>>>> Stashed changes
 
 def is_checked(df):
     """

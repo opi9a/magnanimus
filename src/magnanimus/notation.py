@@ -1,6 +1,54 @@
+"""
+Helper functions to convert between notations.
+
+Currently only for squares.  Moves in dev.
+"""
+def int_to_trad(int_sq):
+    """
+    >>> int_to_trad(36)
+    'e4'
+    """
+
+    rank = int_sq // 8
+    file = int_sq % 8
+    return rank, file
+
+
+def trad_to_int(trad):
+    """
+    >>> trad_to_int(e4)
+    36
+    """
+
+    assert len(trad) == 2
+
+    file_str, rank_str = trad
+
+    file = 'abcdefgh'.find(file_str)
+    rank = 8 - int(rank_str)
+
+    return (rank* 8) + file 
+
+
+def vec_to_int_sq(*vec):
+    """
+    Return int for vec_sq identifier
+
+    >>> vec_to_int_sq(7, 7)
+    63
+    """
+    if len(vec) == 1:
+        # when passing a tuple (1, 3) actually passed as ((1, 3),) it seems
+        vec = vec[0]
+    a, b = vec
+    return a*8 + b
+
+
+# dev beyond here
 
 def trad_mv_to_vec(trad_mv, to_move, board_arr):
     """
+    IN DEV NOT USED
     Eg Ne4: look for a unique knight that can move from e4 
 
     e4      : pawn
@@ -26,6 +74,7 @@ def trad_mv_to_vec(trad_mv, to_move, board_arr):
 
 
 def parse_trad_mv(trad_mv):
+    # IN DEV NOT USED
     # deal with castling
     # (get rid of x)
     # get piece type to move
@@ -92,56 +141,4 @@ def parse_trad_mv(trad_mv):
         for col in range(8):
             pass
 
-
-def vec_from_trad(trad):
-    """
-    Return an np.array vector of coordinates for a passed trad notation
-    position.
-
-    >>> vec_from_trad('a7')
-    1, 0
-    """
-    file, rank = trad
-    row = 8 - int(rank)
-    col = 'abcdefgh'.find(file)
-
-    return row, col
-
-
-def trad_from_vec(*vec):
-    """
-    Return trad notation version of passed np.array coordinates
-
-    >>> trad_from_vec(1, 0)
-    'a7'
-    """
-    row, col = vec
-    rank = 8 - row
-    file = 'abcdefgh'[col]
-
-    return f"{file}{rank}"
-
-
-def int_to_vec_sq(int_sq):
-    """
-    Return vector for int square identifier
-    
-    >>> int_to_vec_sq(63)
-    (7, 7)
-    """
-
-    return int_sq // 8, int_sq % 8
-
-def vec_to_int_sq(*vec):
-    """
-    Return int for vec_sq identifier
-
-    >>> vec_to_int_sq(7, 7)
-    63
-    """
-    if len(vec) == 1:
-        # when passing a tuple (1, 3) actually passed as ((1, 3),)
-        vec = vec[0]
-    a, b = vec
-    return a*8 + b
 

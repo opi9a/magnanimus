@@ -36,27 +36,6 @@ class Path():
         self.mate = False
         self.move = move
 
-    @property
-    def checked(self):
-        """
-        Return black, white or None
-        """
-        if not any(self.df['gives_check']):
-            return None
-        
-        checks = self.df.loc[self.df['gives_check'], 'color'].unique()
-
-        assert len(checks) == 1
-
-        # need to invert as the df has color GIVING check
-        return invert_color(checks[0])
-
-
-
-        """
-        New path cannot leave player in check
-        """
-
     def __repr__(self):
         pad = 15
         out = []
@@ -78,15 +57,39 @@ class Path():
 
         return "\n".join(out)
 
+    @property
+    def checked(self):
+        """
+        Return black, white or None
+        """
+        if is_checked(self.df) is not None:
+            return is_checked(self.df)[0]
+        else:
+            return None
 
-def update_df(df, move):
+
+def is_checked(df):
+    """
+    Return list of colors or None
+    May be both, in which case is illegal
+    """
+    if not any(df['gives_check']):
+        return None
+    
+    checks = df.loc[df['gives_check'], 'color'].unique()
+
+    # need to invert as the df has color GIVING check
+    return [invert_color(check) for check in checks]
+
+
+def update_df(df, move, analyse=True):
     """
     Pass a move
     Do the move
     Find pieces to change
     Change them
     Get their scores
-    Return
+    Return the df
     """
     df = df.copy()
 
@@ -97,20 +100,28 @@ def update_df(df, move):
     # move the piece simply by renaming the index
     df.rename(index={move[0]: move[1]}, inplace=True)
 
-    # get list of squares where either move[0] or move[1] is in
-    # available
+    squares_to_reanalyse = get_squares_to_reanalyse(df, move)
 
-    # need to include pieces that were defending the moved square
+    if analyse:
+        df = analyse_board(df, squares_to_reanalyse)
 
+    return df
+
+def get_squares_to_reanalyse(df, move):
+    """
+    get list of squares where either move[0] or move[1] is in
+    available
+
+    need to include pieces that were defending the moved square
+    """
     all_sq = df[['free', 'attacking', 'defending']].sum(axis=1)
     squares_to_reanalyse = [
         square for square in df.index
         if set(all_sq[square]).intersection(move)
     ]
 
-    df = analyse_board(df, squares_to_reanalyse)
+    return squares_to_reanalyse
 
-    return df
 
 def get_df_next_moves(df, to_move):
     """

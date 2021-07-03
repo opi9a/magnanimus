@@ -61,11 +61,12 @@ def print_board(board_df=None, scores=None, hlights=None, use_ints=True):
                 black = not(black)
         print(f" {row_names[row]}  ")
 
-    print('    ', end="")
+    print('     ', end="")
     for col in 'abcdefgh':
         print(f" {col} ", end=" ")
     print()
     if scores is not None: print('    White:', f"{scores['white']:.3f}")
+
 
 def get_board_str(board_df=None, board_tuples=None, 
                 scores=None, hlights=None):
@@ -107,7 +108,14 @@ def get_board_str(board_df=None, board_tuples=None,
                 row_line.append(f"|{to_print}|")
             elif board_df is not None:
                 row_line.append(f" {to_print} ")
+
+        row_line.append(f" {row_names[row]}")
         out.append("".join(row_line))
+
+    col_line = ["     "]
+    for col in 'abcdefgh':
+        col_line.append(f" {col} ")
+    out.append("".join(col_line))
 
 
     return "\n".join(out)

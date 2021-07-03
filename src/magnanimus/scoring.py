@@ -1,5 +1,3 @@
-import numpy as np
-
 PIECE_BASE_VALUES = {
     'pawn': 1,
     'bishop': 3,
