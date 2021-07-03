@@ -34,7 +34,8 @@ from datetime import datetime, timedelta
 from .constants import INIT_BOARD_TUPLES, PIECE_CODES, LOG
 from .utils import invert_color, make_board_df, vec_to_int_sq
 from .print_board import print_board, get_board_str
-from .get_best_move import get_best_move, get_df_next_moves, Path
+from .get_best_move import get_best_move
+from .Path import get_df_next_moves, Path
 from .analyse import analyse_board
 
 class Game():
