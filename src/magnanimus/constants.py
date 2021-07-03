@@ -5,6 +5,11 @@ from my_tools.logging import get_filelog
 DATA_DIR = Path('~/.magnanimus/data').expanduser()
 LOG_DIR = Path('~/.magnanimus/logs').expanduser()
 LOG = get_filelog(logfile_path=LOG_DIR / 'magnanimus.log')
+<<<<<<< HEAD
+=======
+
+BASE_COLS = ['piece', 'color', 'row', 'col']
+>>>>>>> 517f07d6708a33eabf8fa67bfd8bf4ef5302380d
 
 PIECE_CODES = {
     'pawn': 'p',
