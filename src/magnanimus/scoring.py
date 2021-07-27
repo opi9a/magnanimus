@@ -14,6 +14,9 @@ COEFFS = {
     'check': 1,
 }
 
+PAWN_DIAG_COVER = 0.02
+CASTLE_SCORE = 5 # temp
+
 CHECKMATE_SCORE = 999
 STALEMATE_SCORE = 0
 

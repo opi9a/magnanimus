@@ -1,219 +1,98 @@
-"""
-Simple chess player
-
-Board:
-    minimal encoding of pieces + locations
-    extract score and next moves (do this together) (color dependent)
-    apply a move (or series) to get a new board
-
-Move - pair of squares:
-    [(0,4),(1,5)]
-
-Path - sequence of game moves:
-    [move1, move2, move3]
-
-Path list:
-    Fields: path (list of moves), score, next_moves
-
-path    score   next_moves
-----    -----   ----------
-[]          0   [((1,1),(2,1))]
-
-YOU ARE HERE you are here
-
-1. in extend paths pick only the top N evaluated next moves to add back to paths_df
-    - careful to sort by ascending or not depending on color relevant for that move
-
-2. checkmate
-3. record games
-4. tweak scoring to make pieces more valuable
-"""
-import pandas as pd
-import  numpy as np
 from datetime import datetime, timedelta
-from .constants import INIT_BOARD_TUPLES, LOG
-from .utils import invert_color, make_board_df
-from .print_board import print_board, get_board_str
-
-from .analyse import analyse_board, analyse_piece
-from .notation import trad_to_int
-
+from .constants import INIT_BOARD_TUPLES, LOG, CASTLING_ROOK_MOVES
+from .utils import invert_color
+from .print_board import get_board_str
 from .get_best_move import get_best_move
-from .Path import get_df_next_moves, Path
+from .Position import Position, from_json
 from .notation import trad_to_int
-
 
 class Game():
+    """
+    Holds a position object with added metadata and methods 
+    so it can run a game
+    """
     
-    def __init__(self, piece_tuples=None, color_playing='black',
-                 to_move='white', time_sec=5, auto_play=True):
+    def __init__(self, init_seed=None, color_playing='black',
+                 pos_fp=None,
+                 to_move='white', legal_castlings=None,
+                 time_sec=5, auto_play=True, max_its=2):
 
         LOG.info('init magnanimo')
+
+        # get the initial position
+        if pos_fp is not None:
+            self.position = from_json(pos_fp)
+        else:
+            self.position = Position(init_seed=init_seed,
+                             to_move=to_move, legal_castlings=legal_castlings)
+
+        # this will store past positions
+        self.positions = []
+
+        # operational parameters
         self.color_playing = color_playing
-        self.to_move = to_move
-        self.last_move = None
         self.time_sec = time_sec
-
-        # set attributes with initial status
-        df = make_board_df(piece_tuples or INIT_BOARD_TUPLES)
-        self.df = analyse_board(df)
-
-        self.paths = [Path(df=self.df, to_move=self.to_move)]
-        self.moves = []
+        self.paths = []
+        self.max_its = max_its
 
         # main loop
         if auto_play:
-            self.auto_play()
+            self.auto_play(max_its)
 
     @property
     def score(self):
-        self.df = analyse_board(self.df)
-        return self.df['score'].sum()
+        return self.position.score
 
     @property
-    def scores(self):
-        score = self.score
-        return {
-            'white': score,
-            'black': -score
-        }
+    def checked(self):
+        return self.position.checked
 
     @property
-    def is_checked(self):
-        # assume only the color to move can be actually in check
-        if is_checked(self.df) is not None:
-            return is_checked(self.df)[0]
-        else:
-            return None
+    def df(self):
+        return self.position.df
 
     def __repr__(self):
+        """
+        Overwrite the position repr for now
+        """
         out = []
         pad = 20
         
 
         out.append(f'       black {-1 * self.score:.2f}')
-        if self.to_move == 'black':
+        if self.position.to_move == 'black':
             out[-1] += '  to move'
-        if self.is_checked == 'black':
+        if self.checked == 'black':
             out[-1] += '  in check'
         out.append(get_board_str(self.df))
         out.append(f'       white {self.score:.2f}')
-        if self.to_move == 'white':
+        if self.position.to_move == 'white':
             out[-1] += '  to move'
-        if self.is_checked == 'white':
+        if self.checked == 'white':
             out[-1] += '  in check'
         out.append('')
 
 
         return "\n".join(out)
 
-    def __getitem__(self, sq):
-        return self.df.loc[sq]
 
-    def score_piece(self, sq):
-        """
-        For piece (trad or int) return the scoring
-        """
-        orig_sq = sq
-
-        if isinstance(sq, str):
-            sq = trad_to_int(sq)
-
-        if not sq in self.df.index:
-            print(f"no piece at {orig_sq}")
-
-        free, attacking, defending, gives_check, score = (
-            analyse_piece(sq, self.df))
-
-        return {
-            'color': self.df.loc[sq]['color'],
-            'piece': self.df.loc[sq]['piece'],
-            'free': free,
-            'attacking': attacking,
-            'defending': defending,
-            'gives_check': gives_check,
-            'score': score
-        }
-
-    def score_board(self, move=None):
-
-        if move is not None:
-            if isinstance(move, str):
-                move = (trad_to_int(move[:2]),
-                        trad_to_int(move[2:]))
-
-            df = update_df(self.df, move)
-        else:
-            df = self.df
-        return analyse_board(df)
-
-    def make_moves(self, moves, auto_change_to_move=True):
-        """
-        Pass a string like "e2e4 d7d6 b1c3"
-        """
-        move_strs = moves.split()
-
-        moves = []
-
-        for move_str in move_strs:
-            moves.append((trad_to_int(move_str[:2]),
-                          trad_to_int(move_str[2:])))
-
-        if auto_change_to_move:
-            to_move = 'change'
-        else:
-            to_move = None
-
-        for move in moves:
-            self.moves.append(move)
-            self.update_board(move, to_move=to_move)
-
-
-    def update_board(self, move, to_move=None):
-        """
-        Update the board_df
-        """
-        if isinstance(move, str):
-            move = (trad_to_int(move[:2]), trad_to_int(move[2:]))
-
-        self.df = update_df(self.df, move)
-
-        if to_move == 'change':
-            self.to_move = invert_color(self.to_move)
-
-        elif to_move is not None:
-            self.to_move = to_move
-
-
-    def undo_last(self, no_to_undo=1):
-        """
-        Undo last move
-        """
-        i = 0
-
-        while i < no_to_undo:
-            last_move = self.moves.pop()
-
-            self.update_board(last_move[::-1])
-            self.to_move = invert_color(self.to_move)
-            print(f'undoing move {last_move} by {self.to_move}')
-            i += 1
-
-
-    def next(self):
+    def next(self, max_its=None):
         """
         Do the next move
         """
-        print_board(self.df, hlights=self.last_move)
+        if self.position.moves:
+            self.position.print_board(hlights=self.position.moves[-1])
+        else:
+            self.position.print_board()
 
-        if self.is_checked is not None:
-            print(f'{self.is_checked} is checked')
+        print(f'{self.checked} is checked')
         # get the opponent's move if its their go
-        if self.color_playing != self.to_move:
-            move = get_opponent_move(self.df, self.to_move)
+        if self.color_playing != self.position.to_move:
+            move = get_opponent_move(self.position)
 
         else:
-            move = self.get_my_move()
+            move, self.paths = get_best_move(self.position, return_positions=True,
+                                             max_its=max_its)
 
         if move == 'x':
             return 'x'
@@ -221,94 +100,77 @@ class Game():
         if move == 'checkmate':
             return 'checkmate'
 
-        print(f'{self.to_move} move:', move)
+        print(f'{self.position.to_move} move:', move)
 
         # update board and turn
-        self.df = update_df(self.df, move)
-        self.df = analyse_board(self.df)
-        self.last_move = move
-        self.to_move = invert_color(self.to_move)
-        self.moves.append(move)
+        self.positions.append(self.position)
+        self.position = Position(self.position, new_move=move)
 
         return 'ok'
 
-    def auto_play(self):
+
+    def auto_play(self, max_its):
         while True:
-            status = self.next()
+            status = self.next(max_its)
             if status == 'x':
                 break
             if status == 'checkmate':
                 break
 
 
-    def get_my_move(self):
+    def undo_last(self):
         """
-        With existing paths
-        Current board
-        Get possible moves (for me)
-        Score them all
+        Revert to previous position
         """
-        move, paths = get_best_move(self.df, self.color_playing,
-                                    return_paths=True)
-
-        self.paths = paths
-        return move
+        self.position = self.positions[-1]
 
 
-    def print_board(self, next_moves_color=None):
-        """
-        Pass a color for next moves
-        """
-        if next_moves_color is not None:
-            next_moves = get_df_next_moves(self.df, next_moves_color)
-            destinations = [move[1] for move in next_moves]
-        else:
-            destinations = None
-
-        print_board(self.df, scores=self.scores, hlights=destinations)
-
-    @property
-    def info(self):
-        lengths = [len(p.next_moves) for p in self.paths]
+    # @property
+    # def info(self):
+    #     lengths_ser = self.paths_df['path'].apply(len).value_counts()
         
-        return {
-            'paths': len(self.paths),
-            'next_moves': np.product(lengths),
-        }
+    #     return {
+    #         'paths': len(self.paths_df),
+    #         'lengths': [ (y,x) for x,y in lengths_ser.iteritems() ],
+    #         'max path_len': lengths_ser.index.max(),
+    #     }
 
-    def init_paths(self):
-        """
-        For a given board df, init a paths list
-        """
-        self.paths = [
-            {
-                'path': [],
-                'df': self.df,
-                'score': self.score,
-                'next_moves': self.next_moves,
-            }
-
-        ] 
-
-def get_opponent_move(board_df, to_move):
+def get_opponent_move(position):
     """
     TODO: accept trad
     """
 
     while True:
-        move_str = input(f'Your move as {to_move} - eg e2e4 (x to quit):  ')
+        raw_move = input(f'Your move as {position.to_move} - eg e2e4 (x to quit):  ')
 
-        if move_str == 'x':
-            return 'x'
-        
-        move = [trad_to_int(x) for x in (move_str[:2], move_str[-2:])]
+        if raw_move:
 
-        legit_moves = get_df_next_moves(board_df, to_move)
+            if raw_move in['x', 'q']:
+                return 'x'
 
-        if tuple(move) in legit_moves:
-            return move
+            if raw_move[0] == '0':
+                zeros = raw_move.count('0')
+                if position.to_move == 'black':
+                    if zeros == 2:
+                        move = CASTLING_ROOK_MOVES['black']['k']
+                    elif zeros == 3:
+                        move = CASTLING_ROOK_MOVES['black']['q']
+                elif position.to_move == 'white':
+                    if zeros == 2:
+                        move = CASTLING_ROOK_MOVES['white']['k']
+                    elif zeros == 3:
+                        move = CASTLING_ROOK_MOVES['white']['q']
 
-        print(f'{move} is not legal try again')
+            else:
+                move = trad_to_int(raw_move)
+
+            if move in position.next_moves:
+                return move
+
+            position.print_board(hlights=move)
+
+        print(f'{raw_move} is not legal try again')
+
 
 
 

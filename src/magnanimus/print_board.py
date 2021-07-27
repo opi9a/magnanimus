@@ -5,7 +5,7 @@ from .utils import make_board_df
 from .notation import vec_to_int_sq
 
 
-def print_board(board_df=None, scores=None, hlights=None, use_ints=True):
+def print_board(board_df=None, to_move=None, scores=None, hlights=None, use_ints=True):
     """
     Print the passed board array.
     Trad notation on west / south axes, np.array notation on north / east
@@ -17,7 +17,12 @@ def print_board(board_df=None, scores=None, hlights=None, use_ints=True):
 
     print()
     
-    if scores is not None: print('    Black:', f"{scores['black']:.3f}")
+    print('    Black:', end="")
+    if scores is not None: print(f"{scores['black']:.3f}", end="")
+    if to_move == 'black':
+        print(' to move')
+    else:
+        print()
 
     black = False
     print("     ", end="")
@@ -65,7 +70,13 @@ def print_board(board_df=None, scores=None, hlights=None, use_ints=True):
     for col in 'abcdefgh':
         print(f" {col} ", end=" ")
     print()
-    if scores is not None: print('    White:', f"{scores['white']:.3f}")
+
+    print('    White:', end="")
+    if scores is not None: print(f"{scores['white']:.3f}", end="")
+    if to_move == 'white':
+        print(' to move')
+    else:
+        print()
 
 
 def get_board_str(board_df=None, board_tuples=None, 

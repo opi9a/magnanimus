@@ -16,11 +16,15 @@ def int_to_trad(int_sq):
 
 def trad_to_int(trad):
     """
-    >>> trad_to_int(e4)
+    Position ('e4') or simple move ('e2e4')
+    >>> trad_to_int('e4')
     36
+    >>> trad_to_int('e2e4')
+    (52, 36)
     """
 
-    assert len(trad) == 2
+    if len(trad) == 4:
+        return trad_to_int(trad[:2]), trad_to_int(trad[2:])
 
     file_str, rank_str = trad
 

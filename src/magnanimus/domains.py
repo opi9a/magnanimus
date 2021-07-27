@@ -188,8 +188,8 @@ def get_knight_domain(row, col, int_squares):
 def get_pawn_domain(color, row, col, int_squares):
     """
     Do on the fly because it is all so board-dependent?:
-        covering: diag only
-        moving: 1 or 2, all only if clear
+        ahead: squares the pawn can move to
+        diagonal: squares the pawn can take on
     """
     if color[0] == 'w':
         op = operator.sub
@@ -198,26 +198,26 @@ def get_pawn_domain(color, row, col, int_squares):
         op = operator.add
         home_row = 1
 
-    covering = []
+    ahead = []
     main_move = (op(row, 1), col)
     if legal_square(*main_move):
 
-        covering.append(main_move)
+        ahead.append(main_move)
         if row == home_row:
-            covering.append((op(row, 2), col))
+            ahead.append((op(row, 2), col))
 
-    hitting = [
+    diagonal = [
         sq for sq in [(op(row, 1), col + 1), (op(row, 1), col - 1)]
         if legal_square(*sq)
     ]
 
     if int_squares:
-        covering = [vec_to_int_sq(sq) for sq in covering]
-        hitting = [vec_to_int_sq(sq) for sq in hitting]
+        ahead = [vec_to_int_sq(sq) for sq in ahead]
+        diagonal = [vec_to_int_sq(sq) for sq in diagonal]
 
     return {
-        'covering': covering,
-        'hitting': hitting,
+        'ahead': ahead,
+        'diagonal': diagonal,
     }
 
 

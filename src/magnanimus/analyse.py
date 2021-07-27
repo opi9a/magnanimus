@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 from .domains import RAW_DOMAINS
-from .scoring import COEFFS, PIECE_BASE_VALUES
+from .scoring import COEFFS, PIECE_BASE_VALUES, PAWN_DIAG_COVER
 from .notation import vec_to_int_sq
 
 def analyse_board(df, squares=None):
@@ -19,13 +19,15 @@ def analyse_board(df, squares=None):
     squares = squares or df.index
 
     for square in squares:
-        free, attacking, defending, gives_check, score = (
+        free, just_covering, attacking, defending, gives_check, score = (
             analyse_piece(square, df)
         )
         df.at[square, 'free'] = free 
         df.at[square, 'attacking'] = attacking 
+        df.at[square, 'just_covering'] = just_covering 
         df.at[square, 'defending'] = defending 
-        df.loc[square, ['gives_check', 'score']] = gives_check, score
+        df.at[square, 'gives_check'] = gives_check
+        df.at[square, 'score'] = score
 
     return df
 
@@ -41,7 +43,7 @@ def analyse_piece(square, df, verbose=False):
             so don't have to later
     """
 
-    free, attacking, defending = get_piece_domains(square, df)
+    free, just_covering, attacking, defending = get_piece_domains(square, df)
 
     # scoring
     base = PIECE_BASE_VALUES[df.loc[square, 'piece']]
@@ -76,16 +78,17 @@ def analyse_piece(square, df, verbose=False):
         print('sum'.ljust(12), score)
 
     # returns
-    return free, attacking, defending, gives_check, score
+    return free, just_covering, attacking, defending, gives_check, score
 
 
 def get_piece_domains(square, df):
     """
     Get the actual square domains affected by the piece.
-    Return:
-        attacking - list of (p_ square) tuples
-        defending - list of (p_ square) tuples
-        covering - list of squares
+    Return these lists of squares:
+        free          - squares the piece can move to only
+        just_covering - diagonals covered by a pawn (cannot move to)
+        attacking     - squares with enemy the piece is attacking
+        defending     - squares with friend the piece is defending
     """
     p_name = df.loc[square, 'piece']
     p_color = df.loc[square, 'color']
@@ -99,6 +102,7 @@ def get_piece_domains(square, df):
 
     free = []
     attacking = []
+    just_covering = []
     defending = []
 
     if p_name in ['rook', 'bishop', 'queen']:
@@ -135,20 +139,18 @@ def get_piece_domains(square, df):
 
     else: # pawn
         # raw domain for pawns has special structure, distinguishing squares
-        # that are just covered (straight moves) vs attacked (diagonal taking)
-        for square in raw_domains['covering']:
+        # that are ahead (can move to) vs diagonal (can take on)
+        for square in raw_domains['ahead']:
             if not square in df.index:
                 free.append(square)
-            else:
-                continue
 
-        for square in raw_domains['hitting']:
+        for square in raw_domains['diagonal']:
             if not square in df.index:
-                continue
+                just_covering.append(square)
             elif df.loc[square, 'color'] == p_color:
                 defending.append(square)
             else:
                 attacking.append(square)
 
-    return free, attacking, defending
+    return free, just_covering, attacking, defending
 
